@@ -272,6 +272,7 @@
                 <button onclick="switchPanel('soal')" id="nav-soal" class="sidebar-item"><i class="fas fa-layer-group w-6"></i> Input Soal</button>
                 <button onclick="switchPanel('pengaturan')" id="nav-pengaturan" class="sidebar-item"><i class="fas fa-cogs w-6"></i> Pengaturan Cover</button>
                 <button onclick="switchPanel('export')" id="nav-export" class="sidebar-item"><i class="fas fa-download w-6 text-indigo-500"></i> Pusat Ekspor & Backup</button>
+                <button onclick="switchPanel('install')" id="nav-install" class="sidebar-item"><i class="fas fa-mobile-alt w-6 text-emerald-600"></i> Instal Aplikasi (PWA)</button>
             </div>
 
             <div class="p-4 border-t border-gray-100 bg-gray-50 flex flex-col gap-2">
@@ -616,6 +617,40 @@
                         <button onclick="exportNilaiSemuaExcel()" class="flex-1 bg-gray-50 border border-gray-200 hover:bg-emerald-50 hover:border-emerald-200 text-gray-700 font-bold py-4 rounded-xl transition-all"><i class="fas fa-award text-emerald-500 text-2xl block mb-2"></i> Excel Daftar Nilai</button>
                         <button onclick="exportAbsensiSemuaExcel()" class="flex-1 bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-200 text-gray-700 font-bold py-4 rounded-xl transition-all"><i class="fas fa-calendar-check text-blue-500 text-2xl block mb-2"></i> Excel Data Absensi</button>
                     </div>
+                </div>
+            </div>
+
+            <!-- PANEL: INSTAL APLIKASI PWA -->
+            <div id="panel-install" class="panel-view hidden slide-up max-w-4xl mx-auto pb-20">
+                <h2 class="text-2xl font-black text-gray-800 mb-6 border-l-4 border-emerald-500 pl-3">Instal Aplikasi (PWA)</h2>
+
+                <div class="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100 space-y-5">
+                    <div class="flex items-start gap-4">
+                        <div class="bg-emerald-100 text-emerald-700 p-4 rounded-2xl"><i class="fas fa-mobile-alt text-3xl"></i></div>
+                        <div>
+                            <h3 class="text-lg font-black text-gray-800">Pasang Edukasi Interaktif di HP</h3>
+                            <p class="text-sm text-gray-600 mt-1">Gunakan tombol di bawah untuk mencoba instalasi otomatis. Jika Chrome belum mengizinkan instalasi PWA, menu ini akan memberi petunjuk alternatif.</p>
+                        </div>
+                    </div>
+
+                    <button id="install-pwa-button" onclick="installPWAFromMenu()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black text-lg py-4 rounded-xl shadow-lg transition active:scale-95">
+                        <i class="fas fa-download mr-2"></i> INSTAL APLIKASI
+                    </button>
+                    <p id="install-pwa-status" class="text-sm font-bold text-gray-600 bg-gray-50 border border-gray-200 rounded-xl p-4">Memeriksa dukungan instalasi...</p>
+
+                    <div class="bg-blue-50 border border-blue-100 rounded-2xl p-5">
+                        <h3 class="font-black text-blue-800 mb-2"><i class="fas fa-info-circle mr-2"></i>Jika tombol instal belum tersedia</h3>
+                        <ol class="list-decimal pl-5 space-y-2 text-sm text-blue-900">
+                            <li>Buka alamat aplikasi ini langsung di Google Chrome, bukan dari browser dalam aplikasi lain.</li>
+                            <li>Pastikan internet aktif dan tunggu halaman selesai dimuat.</li>
+                            <li>Tekan menu Chrome <strong>⋮</strong>. Jika tersedia, pilih <strong>Instal aplikasi</strong>.</li>
+                            <li>Jika hanya muncul <strong>Buat pintasan</strong>, Chrome belum menawarkan instalasi PWA penuh. Periksa kembali manifest dan service worker, lalu muat ulang situs.</li>
+                        </ol>
+                    </div>
+                    <div class="bg-amber-50 border border-amber-200 rounded-2xl p-5">
+                        <p class="text-sm text-amber-900"><strong>Catatan:</strong> tombol ini tidak dapat memaksa Chrome memasang aplikasi jika browser menolak syarat instalasi. Menu ini membantu mencoba prompt instalasi dan menunjukkan petunjuk jika prompt belum tersedia.</p>
+                    </div>
+                    <button onclick="checkPWAStatus(true)" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 rounded-xl"><i class="fas fa-sync-alt mr-2"></i> Periksa Status PWA</button>
                 </div>
             </div>
 
@@ -2274,8 +2309,69 @@
                 if (r.isConfirmed) exitToCover();
             }
         });
-        let installPromptEvent;
-        window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installPromptEvent=e; });
+        let installPromptEvent = null;
+        window.addEventListener('beforeinstallprompt', e => {
+            e.preventDefault();
+            installPromptEvent = e;
+            updateInstallButtonStatus('Chrome siap menawarkan instalasi. Tekan tombol INSTAL APLIKASI.', true);
+        });
+        window.addEventListener('appinstalled', () => {
+            installPromptEvent = null;
+            updateInstallButtonStatus('Aplikasi berhasil dipasang di perangkat ini.', false);
+            if (window.Swal) Swal.fire('Berhasil', 'Edukasi Interaktif telah dipasang.', 'success');
+        });
+        function updateInstallButtonStatus(message, canInstall) {
+            const status = document.getElementById('install-pwa-status');
+            const button = document.getElementById('install-pwa-button');
+            if (status) status.textContent = message;
+            if (button) {
+                button.innerHTML = canInstall ? '<i class="fas fa-download mr-2"></i> INSTAL APLIKASI' : '<i class="fas fa-mobile-alt mr-2"></i> PETUNJUK INSTALASI';
+            }
+        }
+        async function checkPWAStatus(showPopup = false) {
+            const standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+            let swText = 'Service worker tidak didukung browser ini.';
+            if ('serviceWorker' in navigator) {
+                try {
+                    const reg = await navigator.serviceWorker.getRegistration('./');
+                    swText = reg && reg.active ? 'Service worker aktif.' : 'Service worker belum aktif. Muat ulang halaman setelah koneksi internet stabil.';
+                } catch (err) { swText = 'Status service worker tidak dapat diperiksa: ' + (err.message || err); }
+            }
+            const message = standalone ? 'Aplikasi sedang berjalan dalam mode terpasang. ' + swText : (installPromptEvent ? 'Chrome siap menawarkan instalasi. ' : 'Prompt instalasi belum diberikan oleh Chrome. ') + swText;
+            updateInstallButtonStatus(message, !!installPromptEvent);
+            if (showPopup && window.Swal) {
+                Swal.fire({title:'Status PWA', text: message, icon: standalone ? 'success' : (installPromptEvent ? 'info' : 'warning'), confirmButtonText:'Mengerti'});
+            }
+            return {standalone, serviceWorker: swText, installPromptAvailable: !!installPromptEvent};
+        }
+        async function installPWAFromMenu() {
+            if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+                if (window.Swal) await Swal.fire('Aplikasi sudah terpasang', 'Aplikasi sedang berjalan dalam mode aplikasi.', 'success');
+                return;
+            }
+            if (installPromptEvent) {
+                installPromptEvent.prompt();
+                const choice = await installPromptEvent.userChoice;
+                installPromptEvent = null;
+                if (choice && choice.outcome === 'accepted') {
+                    updateInstallButtonStatus('Permintaan instalasi diterima. Ikuti petunjuk pada perangkat.', false);
+                } else {
+                    updateInstallButtonStatus('Instalasi dibatalkan. Anda dapat mencoba lagi melalui menu Chrome jika tersedia.', false);
+                }
+                return;
+            }
+            await checkPWAStatus(false);
+            if (window.Swal) {
+                await Swal.fire({
+                    title: 'Instalasi otomatis belum tersedia',
+                    html: '<div style="text-align:left">Chrome belum memberikan izin/prompt instalasi untuk situs ini.<br><br><b>Coba langkah berikut:</b><ol style="padding-left:20px;list-style:decimal"><li>Buka situs langsung di Chrome.</li><li>Pastikan koneksi internet aktif dan muat ulang halaman.</li><li>Buka menu <b>⋮</b> dan cari <b>Instal aplikasi</b>.</li><li>Jika hanya ada <b>Buat pintasan</b>, PWA perlu diperiksa lewat Chrome DevTools pada bagian Application → Manifest dan Service Workers.</li></ol><br>Tombol ini tidak bisa memaksa browser melewati syarat instalasi.</div>',
+                    icon: 'info', confirmButtonText: 'Mengerti'
+                });
+            } else {
+                alert('Prompt instalasi belum tersedia. Buka menu Chrome ⋮ dan cari Instal aplikasi.');
+            }
+        }
+        document.addEventListener('DOMContentLoaded', () => { checkPWAStatus(false); });
     </script>
 </body>
 </html>
