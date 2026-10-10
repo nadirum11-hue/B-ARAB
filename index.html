@@ -172,9 +172,13 @@
         .student-name-flight { position:fixed !important; left:50%; top:50%; width:90vw; max-width:90vw; z-index:10000; pointer-events:none; margin:0 !important; text-align:center; white-space:normal; overflow-wrap:anywhere; color:#064e3b; font-weight:900; line-height:1.05; text-transform:uppercase; text-shadow:0 0 32px rgba(16,185,129,.6),0 5px 14px rgba(0,0,0,.18); transform:translate(-50%,-50%) scale(1); }
         .student-reveal-flash { animation:studentRevealFlash .55s ease-out both; }
         @keyframes studentRevealFlash { 0%{background:rgba(255,255,255,.92);box-shadow:inset 0 0 100px rgba(239,68,68,.55)} 100%{background:rgba(255,255,255,0);box-shadow:inset 0 0 0 rgba(239,68,68,0)} }
-        #btn-next-question.student-switch-button { background:linear-gradient(135deg,#ff3434,#b91c1c 65%,#7f1d1d) !important; box-shadow:0 8px 0 #7f1d1d,0 12px 24px rgba(185,28,28,.28) !important; padding-top:1.05rem !important; padding-bottom:1.05rem !important; font-size:clamp(1.05rem,2.4vw,1.5rem) !important; transform-origin:center; animation:buttonPulse 1.7s ease-in-out infinite,buttonWiggle 2.4s ease-in-out infinite; }
-        @keyframes buttonWiggle { 0%,82%,100%{transform:rotate(0) scale(1)} 84%{transform:rotate(-1.6deg) scale(1.015)} 86%{transform:rotate(1.6deg) scale(1.015)} 88%{transform:rotate(-1deg)} 90%{transform:rotate(1deg)} 92%{transform:rotate(0)} }
-        @keyframes buttonPulse { 0%,100%{filter:brightness(1);box-shadow:0 8px 0 #7f1d1d,0 0 0 0 rgba(239,68,68,.2)} 50%{filter:brightness(1.14);box-shadow:0 8px 0 #7f1d1d,0 0 0 8px rgba(239,68,68,0)} }
+        /* Tombol pindah soal: hijau, terpisah, berkedip lembut */
+        #btn-next-question.question-next-button { animation:questionButtonBlink .85s ease-in-out infinite; }
+        @keyframes questionButtonBlink { 0%,100%{filter:brightness(1);box-shadow:0 6px 0 #047857,0 0 0 0 rgba(16,185,129,0)} 50%{filter:brightness(1.22);box-shadow:0 6px 0 #047857,0 0 0 7px rgba(16,185,129,.22)} }
+        /* Tombol pindah siswa: lebih besar dan bergoyang cepat */
+        #btn-next-student.student-switch-button { background:linear-gradient(135deg,#f97316,#dc2626 70%,#991b1b) !important; box-shadow:0 9px 0 #991b1b,0 14px 24px rgba(220,38,38,.3) !important; padding:1.25rem 1rem !important; min-height:76px; font-size:clamp(1.1rem,3vw,1.55rem) !important; transform-origin:center; animation:studentButtonShake .34s linear infinite,buttonPulse .8s ease-in-out infinite; }
+        @keyframes studentButtonShake { 0%,100%{transform:translateX(0) rotate(0)} 25%{transform:translateX(-3px) rotate(-.8deg)} 50%{transform:translateX(3px) rotate(.8deg)} 75%{transform:translateX(-2px) rotate(-.5deg)} }
+        @keyframes buttonPulse { 0%,100%{filter:brightness(1)} 50%{filter:brightness(1.12)} }
         #game-student-card { max-width:min(48vw,620px); }
         #game-student-name { overflow-wrap:anywhere; transition:opacity .15s,transform .15s; }
         #game-question { overflow-wrap:anywhere; word-break:normal; }
@@ -198,7 +202,7 @@
           #game-workspace .game-slot { min-width:clamp(2rem,8vw,3.2rem); min-height:clamp(2.1rem,6vh,3.4rem); }
           #game-workspace .game-block { font-size:clamp(1.15rem,5vw,2rem) !important; padding:.35rem .45rem !important; }
         }
-        @media(prefers-reduced-motion:reduce) { .question-blink,.student-shake,.student-name-pop,.student-reveal-flash,#btn-next-question.student-switch-button { animation:none !important; } }
+        @media(prefers-reduced-motion:reduce) { .question-blink,.student-shake,.student-name-pop,.student-reveal-flash,#btn-next-question.question-next-button,#btn-next-student.student-switch-button { animation:none !important; } }
 
     </style>
 </head>
@@ -823,8 +827,11 @@
             <button id="btn-check-answer" onclick="checkAnswer()" class="w-full max-w-xl block bg-blue-500 hover:bg-blue-600 text-white font-black text-lg md:text-xl py-3 rounded-xl shadow-[0_6px_0_#1d4ed8] active:translate-y-1 active:shadow-none transition-all uppercase tracking-wide">
                 <i class="fas fa-check-circle mr-2"></i> CEK JAWABAN SAYA
             </button>
-            <button id="btn-next-question" onclick="nextTurn()" class="hidden w-full max-w-xl block bg-emerald-500 hover:bg-emerald-600 text-white font-black text-lg md:text-xl py-3 rounded-xl shadow-[0_6px_0_#047857] active:translate-y-1 active:shadow-none transition-all uppercase tracking-wide">
+            <button id="btn-next-question" onclick="nextTurn()" class="hidden question-next-button w-full max-w-xl block bg-emerald-500 hover:bg-emerald-600 text-white font-black text-lg md:text-xl py-3 rounded-xl shadow-[0_6px_0_#047857] active:translate-y-1 active:shadow-none transition-all uppercase tracking-wide">
                 SELANJUTNYA <i class="fas fa-forward ml-2"></i>
+            </button>
+            <button id="btn-next-student" onclick="nextTurn()" class="hidden student-switch-button w-full max-w-2xl block text-white font-black text-lg md:text-2xl rounded-2xl active:translate-y-1 transition-all uppercase tracking-wide">
+                <i class="fas fa-bullhorn mr-2"></i> LANJUT SISWA BERIKUTNYA <i class="fas fa-user-check ml-2"></i>
             </button>
         </div>
     </div>
@@ -2002,10 +2009,9 @@
             }
             btnCheck.classList.remove('hidden');
             const nextBtn = document.getElementById('btn-next-question');
-            nextBtn.classList.add('hidden'); nextBtn.classList.remove('student-switch-button');
-            nextBtn.innerHTML = appState.game.repeatMode === 'satu_nama' && appState.game.activeQuestions.length === 0
-                ? '<i class="fas fa-bullhorn mr-2"></i> LANJUT KE SISWA SELANJUTNYA <i class="fas fa-user-check ml-2"></i>'
-                : 'SOAL BERIKUTNYA <i class="fas fa-forward ml-2"></i>';
+            const nextStudentBtn = document.getElementById('btn-next-student');
+            nextBtn.classList.add('hidden');
+            nextStudentBtn.classList.add('hidden');
             
             const ws = document.getElementById('game-workspace');
             ws.className = 'w-full flex-grow flex flex-col gap-2 overflow-hidden justify-center min-h-0 p-1 relative';
@@ -2160,13 +2166,13 @@
                  return true;
             } else {
                 const nextBtn = document.getElementById('btn-next-question');
-                nextBtn.classList.remove('hidden');
+                const nextStudentBtn = document.getElementById('btn-next-student');
                 if (appState.game.repeatMode === 'satu_nama' && appState.game.activeQuestions.length === 0) {
-                    nextBtn.classList.add('student-switch-button');
-                    nextBtn.innerHTML = '<i class="fas fa-bullhorn mr-2"></i> LANJUT KE SISWA SELANJUTNYA <i class="fas fa-user-check ml-2"></i>'; 
+                    nextStudentBtn.classList.remove('hidden');
+                    nextBtn.classList.add('hidden');
                 } else {
-                    nextBtn.classList.remove('student-switch-button');
-                    nextBtn.innerHTML = 'SOAL BERIKUTNYA <i class="fas fa-forward ml-2"></i>';
+                    nextBtn.classList.remove('hidden');
+                    nextStudentBtn.classList.add('hidden');
                 }
                 if (showAlert) {
                     if (score > 0) Swal.fire({ title, icon: 'success', timer: 1500, showConfirmButton: false });
